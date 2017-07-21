@@ -59,7 +59,7 @@
                     for (let [key,value] of Object.entries(json[data])) {
                         html += key + ": " + value + "<br>";
                     }
-                    html += "缩略图: <span id='thumbNail'>正在加载...</span> <br>";
+                    html += "缩略图: <span id='thumbNail'>正在加载...</span><span id='progress'></span> <br>";
                     loadImageAsync(`images/clashRoyale/cards/${json[data]['英文名']}.png`).then(function (img) {
                         var thb = document.getElementById("thumbNail");
                         thb.innerHTML = '';
@@ -88,7 +88,7 @@
                 /*XHR.responseType = "json";
                 XHR.setRequestHeader("Accept", "application/json");*/
                 XHR.send();
-                XHR.onreadystatechange = function () {
+                XHR.onreadystatechange = function (e) {
                     if (this.readyState !== 4) {
                         return;
                     }
@@ -98,6 +98,24 @@
                         reject(this.status + ' ' + this.statusText);
                     }
                 };
+                XHR.onabort = function (e) {
+
+                }
+                XHR.onerror = function (e) {
+
+                }
+                XHR.onload = function (e) {
+
+                }
+                XHR.onloadstart = function (e) {
+
+                }
+                XHR.onloadend = function (e) {
+
+                }
+                XHR.onprogress = function (e) {
+
+                }
             })
         }
 
@@ -108,6 +126,16 @@
          */
         function loadImageAsync(url) {
             return new Promise(function (resolve, reject) {
+                var XHR = new XMLHttpRequest();
+                XHR.open('get', url);
+                XHR.send();
+                XHR.onprogress = function (event) {
+                    var progress = '';
+                    var divStauts = document.getElementById("progress");
+                    if (event.lengthComputable) {
+                        divStauts.innerHTML = "" + Math.round(100 * event.loaded / event.total) + "%";
+                    }
+                }
                 var image = new Image();
 
                 image.onload = function () {
@@ -115,7 +143,7 @@
                 };
 
                 image.onerror = function () {
-                    reject(new Error('Could not load image at ' + url));
+                    reject(new Error('加载错误: ' + url));
                 };
 
                 image.src = url;
