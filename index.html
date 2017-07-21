@@ -34,15 +34,20 @@
 
         let input = document.getElementById("crInput"),
             info = document.getElementById("info"),
-            jsonUrl = document.getElementById("url");
+            jsonUrl = document.getElementById("url"),
+            timer;
 
         /*绑定事件*/
-        input.addEventListener("input", function (e) {
-            info.innerHTML = '正在查询';
-            let promise = new Promise(function (resolve, reject) {
-                AJAX(jsonUrl.value || "data.json", json => resolve(json), (error) => reject(`错误代码"${error}"... <img src=images/clashRoyale/emotions/cry.gif />`));
-            });
-            promise.then(json => show(json), error => info.innerHTML = error);
+        input.addEventListener("input", function () {
+            if(timer) clearTimeout(timer);
+            timer = setTimeout(function () {
+                info.innerHTML = '正在查询';
+                AJAX(jsonUrl.value || 'data.json').then(function (json) {
+                    show(json);
+                }, function (error) {
+                    info.innerHTML = `错误代码"${error}"... <img src=images/clashRoyale/emotions/cry.gif />`;
+                })
+            }, 600);
         });
 
 
@@ -54,7 +59,14 @@
                     for (let [key,value] of Object.entries(json[data])) {
                         html += key + ": " + value + "<br>";
                     }
-                    html += "缩略图: <img src=images/clashRoyale/cards/" + json[data]['英文名'] + ".png /> <br>";
+                    html += "缩略图: <span id='thumbNail'>正在加载...</span> <br>";
+                    loadImageAsync(`images/clashRoyale/cards/${json[data]['英文名']}.png`).then(function (img) {
+                        var thb = document.getElementById("thumbNail");
+                        thb.innerHTML = '';
+                        thb.appendChild(img);
+                    }, function (error) {
+                        document.getElementById("thumbNail").innerHTML = error;
+                    });
                     info.innerHTML = html;
                     return;
                 } else {
@@ -67,22 +79,47 @@
         /**
          * AJAX调用
          * @param type 可选值post,get(默认)
-         * @param callback 成功回调函数
-         * @param error 失败回调函数
-         * @param url
+         * @param url 服务器地址
          */
-        function AJAX(url, callback, error, type = 'get') {
-            var XHR = new XMLHttpRequest();
-            XHR.open(type, url);
-            XHR.onreadystatechange = function () {
-                if (XHR.readyState == 4 && XHR.status == 200) {
-                    callback(XHR.responseText);
-                }
-                if (XHR.status == 404 || XHR.status == 500) {
-                    error(XHR.status + ' ' + XHR.statusText);
-                }
-            };
-            XHR.send();
+        function AJAX(url, type = 'get') {
+            return new Promise(function (resolve, reject) {
+                var XHR = new XMLHttpRequest();
+                XHR.open(type, url);
+                /*XHR.responseType = "json";
+                XHR.setRequestHeader("Accept", "application/json");*/
+                XHR.send();
+                XHR.onreadystatechange = function () {
+                    if (this.readyState !== 4) {
+                        return;
+                    }
+                    if (this.status == 200) {
+                        resolve(this.responseText);
+                    } else {
+                        reject(this.status + ' ' + this.statusText);
+                    }
+                };
+            })
+        }
+
+        /**
+         * 异步加载图片
+         * @param url
+         * @returns {Promise}
+         */
+        function loadImageAsync(url) {
+            return new Promise(function (resolve, reject) {
+                var image = new Image();
+
+                image.onload = function () {
+                    resolve(image);
+                };
+
+                image.onerror = function () {
+                    reject(new Error('Could not load image at ' + url));
+                };
+
+                image.src = url;
+            });
         }
 
     })()
